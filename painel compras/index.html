@@ -1,81 +1,59 @@
 <!DOCTYPE html>
-<html lang="pt-BR">
+<html lang="pt-BR" class="dark">
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>Controle de compras - Implantação Hospitalar</title>
+    <title>Painel de Controle de Compras Hospitalares</title>
     <script src="https://cdn.tailwindcss.com"></script>
     <script src="https://cdn.jsdelivr.net/npm/chart.js"></script>
+    <script src="https://cdn.jsdelivr.net/npm/chartjs-plugin-datalabels@2.1.0"></script>
     <link rel="preconnect" href="https://fonts.googleapis.com">
     <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
     <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700&display=swap" rel="stylesheet">
-    <!-- Chosen Palette: Warm Neutrals -->
+    <!-- Chosen Palette: Dark Sapphire (Fixed) -->
     <!-- Application Structure Plan: A estrutura é um painel de controle (dashboard) de topo para base. Começa com KPIs (Indicadores Chave de Desempenho) para uma visão geral imediata. Segue com uma visualização do funil do processo através de gráficos de status para identificar gargalos. Finalmente, uma tabela detalhada e filtrável permite a análise profunda de itens específicos. Esta arquitetura foi escolhida para apoiar o fluxo de trabalho de um gestor: entender o panorama geral, identificar áreas problemáticas e, em seguida, investigar as causas raiz, tornando a gestão do processo mais eficiente do que uma simples lista estática. -->
-    <!-- Visualization & Content Choices: KPIs (HTML/Tailwind) para informar rapidamente sobre totais e itens críticos. Gráficos de Rosca (Chart.js) para comparar a distribuição de itens em cada estágio principal do processo (Requisição, Pedido, Entrega), ideal para visualizar proporções e gargalos. Tabela Interativa (HTML/JS) para organizar e permitir a filtragem detalhada, dando ao usuário o poder de explorar os dados brutos. Esta combinação transforma um documento de processo estático em uma ferramenta de análise dinâmica. -->
+    <!-- Visualization & Content Choices: KPIs (HTML/Tailwind) para informar rapidamente sobre totais e itens críticos. Gráficos de Barras Horizontais (Chart.js) com rótulos de dados para comparar a contagem de itens em cada estágio, ideal para comparar volumes e identificar rapidamente os status com mais itens. Tabela Interativa (HTML/JS) para organizar e permitir a filtragem detalhada. -->
     <!-- CONFIRMATION: NO SVG graphics used. NO Mermaid JS used. -->
     <style>
         body {
             font-family: 'Inter', sans-serif;
-            background-color: #f8f7f4;
-            color: #4a4a4a;
         }
         .chart-container {
             position: relative;
             width: 100%;
-            max-width: 400px;
+            max-width: 500px;
             margin-left: auto;
             margin-right: auto;
-            height: 300px;
-            max-height: 350px;
+            height: 350px;
+            max-height: 400px;
         }
         @media (min-width: 768px) {
             .chart-container {
-                height: 350px;
+                height: 400px;
             }
         }
         .kpi-card {
-            background-color: #ffffff;
-            border: 1px solid #e5e7eb;
             transition: transform 0.2s ease-in-out, box-shadow 0.2s ease-in-out;
         }
         .kpi-card:hover {
             transform: translateY(-5px);
-            box-shadow: 0 10px 15px -3px rgba(0, 0, 0, 0.1), 0 4px 6px -2px rgba(0, 0, 0, 0.05);
         }
-        ::-webkit-scrollbar {
-            width: 8px;
-        }
-        ::-webkit-scrollbar-track {
-            background: #f1f1f1;
-        }
-        ::-webkit-scrollbar-thumb {
-            background: #c5c5c5;
-            border-radius: 10px;
-        }
-        ::-webkit-scrollbar-thumb:hover {
-            background: #a8a8a8;
-        }
+        ::-webkit-scrollbar { width: 8px; }
+        ::-webkit-scrollbar-track { background: #0d1117; }
+        ::-webkit-scrollbar-thumb { background: #30363d; border-radius: 10px; }
+        ::-webkit-scrollbar-thumb:hover { background: #58a6ff; }
+        
         .loading-overlay {
-            position: fixed;
-            top: 0;
-            left: 0;
-            width: 100%;
-            height: 100%;
-            background-color: rgba(248, 247, 244, 0.8);
-            display: flex;
-            justify-content: center;
-            align-items: center;
-            z-index: 9999;
-            flex-direction: column;
-            gap: 1rem;
+            position: fixed; top: 0; left: 0; width: 100%; height: 100%;
+            display: flex; justify-content: center; align-items: center;
+            z-index: 9999; flex-direction: column; gap: 1rem;
         }
         .loader {
-            border: 8px solid #f3f3f3;
+            width: 60px; height: 60px;
             border-radius: 50%;
-            border-top: 8px solid #3b82f6;
-            width: 60px;
-            height: 60px;
-            animation: spin 2s linear infinite;
+            border: 8px solid #30363d;
+            border-top-color: #58a6ff;
+            animation: spin 1s linear infinite;
         }
         @keyframes spin {
             0% { transform: rotate(0deg); }
@@ -83,95 +61,54 @@
         }
     </style>
 </head>
-<body class="antialiased">
+<body class="bg-gray-900 text-gray-300 antialiased">
 
-    <div id="loading" class="loading-overlay">
+    <div id="loading" class="loading-overlay bg-gray-900">
         <div class="loader"></div>
-        <p class="text-lg text-gray-700 font-medium">Carregando dados das planilhas...</p>
-        <div id="error-message" class="hidden mt-4 p-4 bg-red-100 text-red-700 border border-red-300 rounded-md text-sm max-w-lg text-center"></div>
+        <p class="text-lg font-medium text-gray-400">Carregando dados das planilhas...</p>
+        <div id="error-message" class="hidden mt-4 p-4 bg-red-900/50 text-red-300 border border-red-500/50 rounded-md text-sm max-w-lg text-center"></div>
     </div>
 
     <div class="container mx-auto p-4 sm:p-6 lg:p-8">
         
         <header class="mb-8 text-center">
-            <h1 class="text-3xl md:text-4xl font-bold text-gray-800">Painel de Controle de Compras</h1>
-            <p class="text-lg text-gray-600 mt-2">Visão consolidada de aquisições hospitalares</p>
+            <h1 class="text-3xl md:text-4xl font-bold text-gray-100">Painel de Controle de Compras</h1>
+            <p class="text-lg text-gray-400 mt-2">Visão consolidada de aquisições hospitalares</p>
         </header>
 
         <main>
             <!-- Seção de KPIs -->
             <section id="kpi-section" class="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-5 gap-6 mb-10">
-                <div class="kpi-card p-6 rounded-lg shadow-sm">
-                    <h3 class="text-sm font-medium text-gray-500">Valor Consumo (R$)</h3>
-                    <p id="kpi-valor-consumo" class="text-3xl font-bold text-sky-600 mt-2">0</p>
-                </div>
-                <div class="kpi-card p-6 rounded-lg shadow-sm">
-                    <h3 class="text-sm font-medium text-gray-500">Valor Imobilizado (R$)</h3>
-                    <p id="kpi-valor-imobilizado" class="text-3xl font-bold text-indigo-600 mt-2">0</p>
-                </div>
-                <div class="kpi-card p-6 rounded-lg shadow-sm col-span-1 sm:col-span-2 lg:col-span-1">
-                    <h3 class="text-sm font-medium text-gray-500">Valor Total Geral (R$)</h3>
-                    <p id="kpi-valor-total" class="text-3xl font-bold text-gray-900 mt-2">0</p>
-                </div>
-                <div class="kpi-card p-6 rounded-lg shadow-sm">
-                    <h3 class="text-sm font-medium text-gray-500">Entregas em Atraso</h3>
-                    <p id="kpi-entregas-atraso" class="text-3xl font-bold text-red-600 mt-2">0</p>
-                </div>
-                <div class="kpi-card p-6 rounded-lg shadow-sm">
-                    <h3 class="text-sm font-medium text-gray-500">Itens Críticos</h3>
-                    <p id="kpi-itens-criticos" class="text-3xl font-bold text-yellow-600 mt-2">0</p>
-                </div>
+                <div class="kpi-card p-6 rounded-lg bg-gray-800 border border-gray-700"><h3 class="text-sm font-medium text-gray-400">Valor Consumo (R$)</h3><p id="kpi-valor-consumo" class="text-3xl font-bold text-sky-400 mt-2">0</p></div>
+                <div class="kpi-card p-6 rounded-lg bg-gray-800 border border-gray-700"><h3 class="text-sm font-medium text-gray-400">Valor Imobilizado (R$)</h3><p id="kpi-valor-imobilizado" class="text-3xl font-bold text-indigo-400 mt-2">0</p></div>
+                <div class="kpi-card p-6 rounded-lg bg-gray-800 border border-gray-700 col-span-1 sm:col-span-2 lg:col-span-1"><h3 class="text-sm font-medium text-gray-400">Valor Total Geral (R$)</h3><p id="kpi-valor-total" class="text-3xl font-bold text-gray-100 mt-2">0</p></div>
+                <div class="kpi-card p-6 rounded-lg bg-gray-800 border border-gray-700"><h3 class="text-sm font-medium text-gray-400">Entregas em Atraso</h3><p id="kpi-entregas-atraso" class="text-3xl font-bold text-red-500 mt-2">0</p></div>
+                <div class="kpi-card p-6 rounded-lg bg-gray-800 border border-gray-700"><h3 class="text-sm font-medium text-gray-400">Itens Críticos</h3><p id="kpi-itens-criticos" class="text-3xl font-bold text-yellow-400 mt-2">0</p></div>
             </section>
 
             <!-- Seção de Filtros -->
-             <section id="filters-section" class="mb-10 p-6 bg-white rounded-lg shadow">
+             <section id="filters-section" class="mb-10 p-6 rounded-lg bg-gray-800 border border-gray-700">
                  <div class="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-5 gap-4">
-                    <div class="lg:col-span-2">
-                        <label for="filter-hospital" class="block text-sm font-medium text-gray-700 mb-1">Hospital</label>
-                        <select id="filter-hospital" class="w-full p-2 border border-gray-300 rounded-md focus:ring-2 focus:ring-blue-500 focus:border-blue-500"></select>
-                    </div>
-                    <div>
-                        <label for="filter-criticidade" class="block text-sm font-medium text-gray-700 mb-1">Criticidade</label>
-                        <select id="filter-criticidade" class="w-full p-2 border border-gray-300 rounded-md focus:ring-2 focus:ring-blue-500 focus:border-blue-500">
-                            <option value="">Todas</option>
-                            <option value="True">Crítico</option>
-                            <option value="False">Não Crítico</option>
-                        </select>
-                    </div>
-                    <div>
-                        <label for="filter-setor" class="block text-sm font-medium text-gray-700 mb-1">Setor</label>
-                        <select id="filter-setor" class="w-full p-2 border border-gray-300 rounded-md focus:ring-2 focus:ring-blue-500 focus:border-blue-500">
-                            <option value="">Todos</option>
-                        </select>
-                    </div>
-                    <div>
-                        <label for="filter-status-entrega" class="block text-sm font-medium text-gray-700 mb-1">Status Entrega</label>
-                        <select id="filter-status-entrega" class="w-full p-2 border border-gray-300 rounded-md focus:ring-2 focus:ring-blue-500 focus:border-blue-500">
-                            <option value="">Todos</option>
-                        </select>
-                    </div>
+                    <div class="lg:col-span-2"><label for="filter-hospital" class="block text-sm font-medium text-gray-300 mb-1">Hospital</label><select id="filter-hospital" class="w-full p-2 border rounded-md focus:ring-2 bg-gray-700 border-gray-600 focus:border-blue-500"></select></div>
+                    <div><label for="filter-criticidade" class="block text-sm font-medium text-gray-300 mb-1">Criticidade</label><select id="filter-criticidade" class="w-full p-2 border rounded-md focus:ring-2 bg-gray-700 border-gray-600 focus:border-blue-500"><option value="">Todas</option><option value="True">Crítico</option><option value="False">Não Crítico</option></select></div>
+                    <div><label for="filter-setor" class="block text-sm font-medium text-gray-300 mb-1">Setor</label><select id="filter-setor" class="w-full p-2 border rounded-md focus:ring-2 bg-gray-700 border-gray-600 focus:border-blue-500"><option value="">Todos</option></select></div>
+                    <div><label for="filter-status-entrega" class="block text-sm font-medium text-gray-300 mb-1">Status Entrega</label><select id="filter-status-entrega" class="w-full p-2 border rounded-md focus:ring-2 bg-gray-700 border-gray-600 focus:border-blue-500"><option value="">Todos</option></select></div>
                 </div>
-                 <div class="mt-4">
-                    <label for="filter-search" class="block text-sm font-medium text-gray-700 mb-1">Busca Rápida</label>
-                    <input type="text" id="filter-search" placeholder="Buscar por descrição ou código do item..." class="w-full p-2 border border-gray-300 rounded-md focus:ring-2 focus:ring-blue-500 focus:border-blue-500">
-                 </div>
+                 <div class="mt-4"><label for="filter-search" class="block text-sm font-medium text-gray-300 mb-1">Busca Rápida</label><input type="text" id="filter-search" placeholder="Buscar por descrição ou código do item..." class="w-full p-2 border rounded-md focus:ring-2 bg-gray-700 border-gray-600 focus:border-blue-500"></div>
             </section>
 
             <!-- Seção de Gráficos do Funil -->
-            <section id="charts-section" class="mb-10 p-6 bg-white rounded-lg shadow">
-                <h2 class="text-2xl font-semibold text-gray-800 mb-6 text-center">Funil do Processo</h2>
-                <div class="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-8">
-                    <div class="flex flex-col items-center"><h3 class="text-lg font-medium text-gray-700 mb-4">Status das Requisições</h3><div class="chart-container"><canvas id="statusAprovacaoChart"></canvas></div></div>
-                    <div class="flex flex-col items-center"><h3 class="text-lg font-medium text-gray-700 mb-4">Status dos Pedidos</h3><div class="chart-container"><canvas id="statusPedidoChart"></canvas></div></div>
-                    <div class="flex flex-col items-center"><h3 class="text-lg font-medium text-gray-700 mb-4">Status das Entregas</h3><div class="chart-container"><canvas id="statusEntregaChart"></canvas></div></div>
-                </div>
+            <section id="charts-section" class="mb-10 grid grid-cols-1 lg:grid-cols-3 gap-6">
+                <div class="p-6 rounded-lg bg-gray-800 border border-gray-700 flex flex-col items-center"><h3 class="text-lg font-medium text-gray-200 mb-4">Status Requisição</h3><div class="chart-container"><canvas id="statusAprovacaoChart"></canvas></div></div>
+                <div class="p-6 rounded-lg bg-gray-800 border border-gray-700 flex flex-col items-center"><h3 class="text-lg font-medium text-gray-200 mb-4">Status Pedido</h3><div class="chart-container"><canvas id="statusPedidoChart"></canvas></div></div>
+                <div class="p-6 rounded-lg bg-gray-800 border border-gray-700 flex flex-col items-center"><h3 class="text-lg font-medium text-gray-200 mb-4">Status Entrega</h3><div class="chart-container"><canvas id="statusEntregaChart"></canvas></div></div>
             </section>
 
             <!-- Seção de Detalhes -->
-            <section id="details-section" class="p-6 bg-white rounded-lg shadow">
-                <h2 class="text-2xl font-semibold text-gray-800 mb-6">Lista Detalhada de Itens</h2>
+            <section id="details-section" class="p-6 rounded-lg bg-gray-800 border border-gray-700">
+                <h2 class="text-2xl font-semibold text-gray-100 mb-6">Lista Detalhada de Itens</h2>
                 <div class="overflow-x-auto">
-                    <table class="min-w-full divide-y divide-gray-200"><thead class="bg-gray-50"><tr><th scope="col" class="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">Item</th><th scope="col" class="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">Hospital / Setor</th><th scope="col" class="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">Criticidade</th><th scope="col" class="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">Valor Total (R$)</th><th scope="col" class="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">Status Requisição</th><th scope="col" class="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">Status Pedido</th><th scope="col" class="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">Status Entrega</th></tr></thead><tbody id="items-table-body" class="bg-white divide-y divide-gray-200"></tbody></table>
+                    <table class="min-w-full divide-y divide-gray-700"><thead class="bg-gray-700/50"><tr><th scope="col" class="px-6 py-3 text-left text-xs font-medium text-gray-400 uppercase tracking-wider">Item</th><th scope="col" class="px-6 py-3 text-left text-xs font-medium text-gray-400 uppercase tracking-wider">Hospital / Setor</th><th scope="col" class="px-6 py-3 text-left text-xs font-medium text-gray-400 uppercase tracking-wider">Criticidade</th><th scope="col" class="px-6 py-3 text-left text-xs font-medium text-gray-400 uppercase tracking-wider">Valor Total (R$)</th><th scope="col" class="px-6 py-3 text-left text-xs font-medium text-gray-400 uppercase tracking-wider">Status Requisição</th><th scope="col" class="px-6 py-3 text-left text-xs font-medium text-gray-400 uppercase tracking-wider">Status Pedido</th><th scope="col" class="px-6 py-3 text-left text-xs font-medium text-gray-400 uppercase tracking-wider">Status Entrega</th></tr></thead><tbody id="items-table-body" class="bg-gray-800 divide-y divide-gray-700"></tbody></table>
                 </div>
             </section>
         </main>
@@ -183,12 +120,11 @@
             let allData = [];
             const loadingDiv = document.getElementById('loading');
             const errorDiv = document.getElementById('error-message');
+            Chart.register(ChartDataLabels);
 
             try {
                 const response = await fetch('http://127.0.0.1:5000/data');
-                if (!response.ok) {
-                    throw new Error(`HTTP error! status: ${response.status}`);
-                }
+                if (!response.ok) { throw new Error(`HTTP error! status: ${response.status}`); }
                 const data = await response.json();
                 if (data.error) { throw new Error(data.error); }
                 allData = data;
@@ -196,7 +132,7 @@
                 loadingDiv.style.display = 'none';
             } catch (error) {
                 console.error('Falha ao carregar dados:', error);
-                errorDiv.textContent = `Erro ao carregar dados: ${error.message}. Verifique se o servidor Python (app.py) está rodando e se os nomes dos arquivos CSV estão corretos.`;
+                errorDiv.textContent = `Erro ao carregar dados: ${error.message}. Verifique se o servidor Python (app.py) está rodando e se os nomes dos arquivos Excel estão corretos.`;
                 errorDiv.classList.remove('hidden');
                 document.querySelector('.loader').style.display = 'none';
             }
@@ -208,16 +144,29 @@
                 const filterSetor = document.getElementById('filter-setor');
                 const filterStatusEntrega = document.getElementById('filter-status-entrega');
 
-                const statusColors = {
-                    'APROVADA': '#22c55e', 'EM APROVAÇÃO': '#3b82f6', 'CANCELADA': '#ef4444', 'EM RASCUNHO': '#a1a1aa', 'PENDENTE ABERTURA': '#f97316',
-                    'APROVADO': '#22c55e', 'EM COTAÇÃO': '#eab308', 'AGUARDANDO REQUISIÇÃO': '#a1a1aa', 'PENDENTE REQUISIÇÃO': '#f97316',
-                    'RECEBIDO': '#22c55e', 'EM ATRASO': '#ef4444', 'PENDENTE NO PRAZO': '#3b82f6', 'RECEBIDO PARCIAL': '#eab308', 'AGUARDANDO PEDIDO': '#a1a1aa',
+                const chartOptions = {
+                    indexAxis: 'y',
+                    responsive: true,
+                    maintainAspectRatio: false,
+                    plugins: {
+                        legend: { display: false },
+                        datalabels: {
+                            anchor: 'end',
+                            align: 'end',
+                            color: '#c9d1d9',
+                            font: { weight: 'bold', size: 12 },
+                            formatter: (value) => value > 0 ? value : '',
+                        }
+                    },
+                    scales: {
+                        x: { beginAtZero: true, ticks: { color: '#8b949e', precision: 0 }, grid: { color: '#30363d', borderDash: [2, 4] } },
+                        y: { ticks: { color: '#8b949e' }, grid: { display: false } }
+                    }
                 };
-
-                const chartOptions = { responsive: true, maintainAspectRatio: false, plugins: { legend: { position: 'bottom', labels: { padding: 15, boxWidth: 12, font: { size: 12 } } } } };
-                const statusAprovacaoChart = new Chart(document.getElementById('statusAprovacaoChart'), { type: 'doughnut', options: chartOptions });
-                const statusPedidoChart = new Chart(document.getElementById('statusPedidoChart'), { type: 'doughnut', options: chartOptions });
-                const statusEntregaChart = new Chart(document.getElementById('statusEntregaChart'), { type: 'doughnut', options: chartOptions });
+                
+                const statusAprovacaoChart = new Chart(document.getElementById('statusAprovacaoChart'), { type: 'bar', options: chartOptions });
+                const statusPedidoChart = new Chart(document.getElementById('statusPedidoChart'), { type: 'bar', options: chartOptions });
+                const statusEntregaChart = new Chart(document.getElementById('statusEntregaChart'), { type: 'bar', options: chartOptions });
 
                 function populateFilters(data) {
                     const hospitais = [...new Set(data.map(item => item.hospital))].filter(Boolean);
@@ -277,13 +226,26 @@
                 function updateChart(chart, data, property) {
                     const counts = data.reduce((acc, item) => {
                         const key = (item[property] || 'N/A').toString().toUpperCase();
-                        acc[key] = (acc[key] || 0) + 1;
+                        if (key !== '0' && key !== 'N/A') {
+                           acc[key] = (acc[key] || 0) + 1;
+                        }
                         return acc;
                     }, {});
-                    const labels = Object.keys(counts);
-                    const chartData = Object.values(counts);
-                    const backgroundColors = labels.map(label => statusColors[label] || '#cccccc');
-                    chart.data = { labels, datasets: [{ data: chartData, backgroundColor: backgroundColors, borderColor: '#ffffff', borderWidth: 2 }] };
+
+                    const sortedData = Object.entries(counts).sort(([,a],[,b]) => a-b);
+                    const labels = sortedData.map(entry => entry[0]);
+                    const chartData = sortedData.map(entry => entry[1]);
+                    
+                    chart.data = {
+                        labels,
+                        datasets: [{ 
+                            data: chartData, 
+                            backgroundColor: '#3b82f6',
+                            borderColor: '#3b82f6',
+                            borderWidth: 1,
+                            borderRadius: 4,
+                        }]
+                    };
                     chart.update();
                 }
 
@@ -291,21 +253,21 @@
                     const tableBody = document.getElementById('items-table-body');
                     tableBody.innerHTML = '';
                     if (data.length === 0) {
-                        tableBody.innerHTML = `<tr><td colspan="7" class="text-center py-10 text-gray-500">Nenhum item encontrado.</td></tr>`;
+                        tableBody.innerHTML = `<tr><td colspan="7" class="text-center py-10 text-gray-400">Nenhum item encontrado.</td></tr>`;
                         return;
                     }
                     data.forEach(item => {
                         const row = document.createElement('tr');
-                        row.className = 'hover:bg-gray-50';
+                        row.className = 'hover:bg-gray-700/50';
                         const isCritico = String(item.criticidade).toLowerCase() === 'true';
                         row.innerHTML = `
-                            <td class="px-6 py-4 whitespace-nowrap"><div class="text-sm font-medium text-gray-900">${item.classificacao || 'N/A'}</div><div class="text-sm text-gray-500">Cód: ${item.codigo || 'N/A'}</div></td>
-                            <td class="px-6 py-4 whitespace-nowrap"><div class="text-sm font-medium text-gray-900">${item.hospital || 'N/A'}</div><div class="text-sm text-gray-500">${item.setor || 'N/A'}</div></td>
-                            <td class="px-6 py-4 whitespace-nowrap"><span class="px-2 inline-flex text-xs leading-5 font-semibold rounded-full ${isCritico ? 'bg-red-100 text-red-800' : 'bg-green-100 text-green-800'}">${isCritico ? 'Crítico' : 'Não Crítico'}</span></td>
-                            <td class="px-6 py-4 whitespace-nowrap text-sm text-gray-800">${(item.valorTotal || 0).toLocaleString('pt-BR', { style: 'currency', currency: 'BRL' })}</td>
-                            <td class="px-6 py-4 whitespace-nowrap text-sm font-medium" style="color: ${statusColors[(item.statusAprovacao || '').toUpperCase()] || '#4a4a4a'}">${item.statusAprovacao || 'N/A'}</td>
-                            <td class="px-6 py-4 whitespace-nowrap text-sm font-medium" style="color: ${statusColors[(item.statusPedido || '').toUpperCase()] || '#4a4a4a'}">${item.statusPedido || 'N/A'}</td>
-                            <td class="px-6 py-4 whitespace-nowrap text-sm font-medium" style="color: ${statusColors[(item.statusEntrega || '').toUpperCase()] || '#4a4a4a'}">${item.statusEntrega || 'N/A'}</td>
+                            <td class="px-6 py-4 whitespace-nowrap"><div class="text-sm font-medium text-gray-100">${item.classificacao || 'N/A'}</div><div class="text-sm text-gray-400">Cód: ${item.codigo || 'N/A'}</div></td>
+                            <td class="px-6 py-4 whitespace-nowrap"><div class="text-sm font-medium text-gray-100">${item.hospital || 'N/A'}</div><div class="text-sm text-gray-400">${item.setor || 'N/A'}</div></td>
+                            <td class="px-6 py-4 whitespace-nowrap"><span class="px-2 inline-flex text-xs leading-5 font-semibold rounded-full ${isCritico ? 'bg-red-900/50 text-red-300' : 'bg-green-900/50 text-green-300'}">${isCritico ? 'Crítico' : 'Não Crítico'}</span></td>
+                            <td class="px-6 py-4 whitespace-nowrap text-sm text-gray-300">${(item.valorTotal || 0).toLocaleString('pt-BR', { style: 'currency', currency: 'BRL' })}</td>
+                            <td class="px-6 py-4 whitespace-nowrap text-sm font-medium text-gray-300">${item.statusAprovacao || 'N/A'}</td>
+                            <td class="px-6 py-4 whitespace-nowrap text-sm font-medium text-gray-300">${item.statusPedido || 'N/A'}</td>
+                            <td class="px-6 py-4 whitespace-nowrap text-sm font-medium text-gray-300">${item.statusEntrega || 'N/A'}</td>
                         `;
                         tableBody.appendChild(row);
                     });
